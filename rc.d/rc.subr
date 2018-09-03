@@ -49,6 +49,7 @@ _rc_write_runfile() {
 		cat >${_RC_RUNFILE} <<EOF
 daemon_class=${daemon_class}
 daemon_flags=${daemon_flags}
+daemon_nice=${daemon_nice}
 daemon_rtable=${daemon_rtable}
 daemon_timeout=${daemon_timeout}
 daemon_user=${daemon_user}
@@ -170,7 +171,7 @@ _rc_parse_conf() {
 [ -n "${FUNCS_ONLY}" ] && return
 
 rc_start() {
-	${rcexec} "${daemon} ${daemon_flags}"
+	${rcexec} "nice -n ${daemon_nice} ${daemon} ${daemon_flags}"
 }
 
 rc_check() {
@@ -288,6 +289,7 @@ _RC_RUNFILE=${_RC_RUNDIR}/${_name}
 _rc_do _rc_parse_conf
 
 eval _rcflags=\${${_name}_flags}
+eval _rcnice=\${${_name}_nice}
 eval _rcrtable=\${${_name}_rtable}
 eval _rcuser=\${${_name}_user}
 eval _rctimeout=\${${_name}_timeout}
@@ -295,6 +297,7 @@ eval _rctimeout=\${${_name}_timeout}
 # set default values; duplicated in rcctl(8)
 getcap -f /etc/login.conf ${_name} 1>/dev/null 2>&1 && daemon_class=${_name} ||
 	daemon_class=daemon
+[ -z "${daemon_nice}" ] && daemon_nice=10
 [ -z "${daemon_rtable}" ] && daemon_rtable=0
 [ -z "${daemon_user}" ] && daemon_user=root
 [ -z "${daemon_timeout}" ] && daemon_timeout=30
@@ -304,6 +307,7 @@ getcap -f /etc/login.conf ${_name} 1>/dev/null 2>&1 && daemon_class=${_name} ||
 	unset _rcflags
 
 [ -n "${_rcflags}" ] && daemon_flags=${_rcflags}
+[ -n "${_rcnice}" ] && daemon_nice=${_rcnice}
 [ -n "${_rcrtable}" ] && daemon_rtable=${_rcrtable}
 [ -n "${_rcuser}" ] && daemon_user=${_rcuser}
 [ -n "${_rctimeout}" ] && daemon_timeout=${_rctimeout}
@@ -315,7 +319,7 @@ if [ -n "${_RC_DEBUG}" ]; then
 fi
 
 readonly daemon_class
-unset _rcflags _rcrtable _rcuser _rctimeout
+unset _rcflags _rcnice _rcrtable _rcuser _rctimeout
 pexp="${daemon}${daemon_flags:+ ${daemon_flags}}"
 rcexec="su -l -c ${daemon_class} -s /bin/sh ${daemon_user} -c"
 [ "${daemon_rtable}" -eq 0 ] ||
